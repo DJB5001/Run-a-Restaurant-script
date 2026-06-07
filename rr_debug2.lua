@@ -1,4 +1,4 @@
--- rr_debug2.lua  – findet den echten Billboard-Pfad
+-- rr_debug2.lua
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -21,35 +21,34 @@ task.spawn(function()
     log("Restaurant: " .. r1.Name)
     task.wait(0.5)
 
-    -- Alle direkten Children listen
-    log("=== Direct Children ===")
-    for _, child in ipairs(r1:GetChildren()) do
-        warn("[CHILD] " .. child.Name .. " (" .. child.ClassName .. ")")
+    -- Alle TextLabels in descendants finden und Text ausgeben
+    log("Suche alle TextLabels...")
+    for _, desc in ipairs(r1:GetDescendants()) do
+        if desc.ClassName == "TextLabel" then
+            warn("[TL] " .. desc:GetFullName() .. " = '" .. tostring(desc.Text) .. "'")
+        end
     end
     task.wait(1)
 
-    -- BillboardHost suchen
-    local host = r1:FindFirstChild("RestaurantBillboardHost")
-    if not host then
-        log("kein RestaurantBillboardHost!")
-        -- Alle descendants mit Billboard im Namen suchen
-        log("Suche Billboard in descendants...")
-        for _, desc in ipairs(r1:GetDescendants()) do
-            if desc.Name:lower():find("billboard") or desc.Name:lower():find("player") then
-                warn("[DESC] " .. desc:GetFullName() .. " (" .. desc.ClassName .. ")")
-            end
-        end
-        return
-    end
-    log("Host gefunden!")
+    -- Direkter Zugriff testen
+    log("Teste direkten Zugriff...")
+    local ok1, v1 = pcall(function()
+        return r1.RestaurantBillboardHost.RestaurantBillboard.Frame.PlayerName.Text
+    end)
+    log("Dot-Access: ok=" .. tostring(ok1) .. " val=" .. tostring(v1))
     task.wait(0.5)
 
-    -- Alle descendants vom Host listen
-    log("=== Host Descendants ===")
-    for _, desc in ipairs(host:GetDescendants()) do
-        warn("[DESC] " .. desc:GetFullName() .. " (" .. desc.ClassName .. ")" .. (desc.ClassName == "TextLabel" and (" TEXT='" .. tostring(desc.Text) .. "'") or ""))
-        task.wait(0.02)
-    end
+    -- Mit WaitForChild testen
+    local ok2, v2 = pcall(function()
+        local host = r1:WaitForChild("RestaurantBillboardHost", 3)
+        local billboard = host:WaitForChild("RestaurantBillboard", 3)
+        local frame = billboard:WaitForChild("Frame", 3)
+        local playerName = frame:WaitForChild("PlayerName", 3)
+        return playerName.Text
+    end)
+    log("WaitForChild: ok=" .. tostring(ok2) .. " val=" .. tostring(v2))
+    task.wait(0.5)
 
-    log("FERTIG - schau in warn!")
+    log("DisplayName ist: '" .. LocalPlayer.DisplayName .. "'")
+    log("FERTIG")
 end)
